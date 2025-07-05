@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Foundation Intranet</title>
+  <style>
+    body {
+      background: #000;
+      color: #00ff00;
+      font-family: 'Fira Mono', 'Consolas', monospace;
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    #console, #boot-sequence, #security-level-select {
+      white-space: pre-wrap;
+      font-size: 1.2rem;
+      line-height: 1.5;
+    }
+    .console-link {
+      color: #00ff00;
+      text-decoration: none;
+      border-bottom: 1px dashed #00ff00;
+      transition: background 0.2s, color 0.2s;
+      padding: 2px 4px;
+      cursor: pointer;
+      display: inline-block;
+      margin-bottom: 0.5em;
+    }
+    .console-link:hover, .console-link:focus {
+      background: #00ff00;
+      color: #000;
+      border-bottom: 1px solid #00ff00;
+    }
+    .prompt {
+      color: #00ff00;
+      margin-right: 8px;
+      user-select: none;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 0.7em;
+    }
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      background: #00ff00;
+      animation: blink 1s steps(1) infinite;
+      vertical-align: bottom;
+      height: 1em;
+      margin-left: 2px;
+    }
+    .hidden {
+      display: none;
+    }
+    #security-level-select {
+      margin-top: 2em;
+    }
+    .level-btn {
+      background: #000;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      font-family: inherit;
+      font-size: 1.1rem;
+      margin: 0 0.5em 0.5em 0;
+      padding: 0.3em 1em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .level-btn:hover, .level-btn.selected {
+      background: #00ff00;
+      color: #000;
+    }
+    #level-prompt {
+      margin-bottom: 1em;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="boot-sequence"></div>
+  <div id="security-level-select" class="hidden"></div>
+  <div id="console" class="hidden">
+    <div id="text"></div>
+    <ul id="link-list"></ul>
+  </div>
+  <script>
+    const bootLines = [
+      "[ OK ] Initialisiere Foundation-Intranet...",
+      "[ OK ] Lade Sicherheitsprotokolle...",
+      "[ OK ] Überprüfe Benutzerberechtigungen...",
+      "[ OK ] Verbinde mit Datenbank...",
+      "[ OK ] Authentifizierung erfolgreich.",
+      "[ OK ] Starte Benutzeroberfläche...",
+      "",
+      "Willkommen bei der SCP Foundation.",
+      ""
+    ];
+
+    const textText = `Herzlich Willkommen im Foundation-Internen Intranet! Aktuell befinden Sie sich im Personalprofil von "[RS] Thomas Greenwood".`;
+
+    const links = [
+      { name: "Crosstestprotokoll SCP-035 x SCP-049-2", url: "https://docs.google.com/document/d/18B3t7HVVrUqNd__kgELkf1RV9tZswhmk_37WJQnb2fM/edit?tab=t.0", level: 3 },
+      { name: "Geisterjagd", url: "https://docs.google.com/document/d/1_Kb08rcrifX9mi6CSAodPLyGX2F8L5R2J1ha14-FrDA/edit?usp=sharing", level: 3 },
+      { name: "SCP Crosstestprotokoll SCP-939 x SCP-049", url: "https://docs.google.com/document/d/1YvKM6nzAX7j497fWMmen8a8_O5kRYk94_J7ZaGeMOVY/edit?usp=sharing", level: 3 }
+    ];
+
+    let selectedLevel = null;
+
+    const bootDiv = document.getElementById('boot-sequence');
+    const consoleDiv = document.getElementById('console');
+    const textDiv = document.getElementById('text');
+    const linkList = document.getElementById('link-list');
+    const levelDiv = document.getElementById('security-level-select');
+    let linkIndex = 0;
+
+    function showBootSequence(i = 0) {
+      if (i < bootLines.length) {
+        bootDiv.innerHTML += bootLines[i] + '\n';
+        setTimeout(() => showBootSequence(i + 1), 400);
+      } else {
+        setTimeout(() => {
+          showSecurityLevelSelect();
+        }, 600);
+      }
+    }
+
+    function showSecurityLevelSelect() {
+      bootDiv.classList.add('hidden');
+      levelDiv.classList.remove('hidden');
+      levelDiv.innerHTML = `
+        <span id="level-prompt">Bitte wählen Sie Ihr Sicherheitslevel:</span>
+        <div id="level-btns"></div>
+      `;
+      const btnsDiv = document.getElementById('level-btns');
+      for (let i = 1; i <= 5; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = 'level-btn';
+        btn.onclick = () => selectLevel(i, btn);
+        btnsDiv.appendChild(btn);
+      }
+    }
+
+    function selectLevel(level, btn) {
+      selectedLevel = level;
+      document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setTimeout(() => {
+        levelDiv.classList.add('hidden');
+        consoleDiv.classList.remove('hidden');
+        typetext();
+      }, 600);
+    }
+
+    function typetext(i = 0) {
+      textDiv.innerHTML = textText.slice(0, i) + '<span class="cursor"></span>';
+      if (i < textText.length) {
+        setTimeout(() => typetext(i + 1), 20);
+      } else {
+        textDiv.innerHTML = textText;
+        setTimeout(typeAllLinks, 400);
+      }
+    }
+
+    function typeLink(link, callback) {
+      const li = document.createElement('li');
+      const prompt = document.createElement('span');
+      prompt.className = 'prompt';
+      prompt.textContent = '>';
+      li.appendChild(prompt);
+
+      const a = document.createElement('a');
+      a.className = 'console-link';
+      a.href = link.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.tabIndex = -1;
+
+      li.appendChild(a);
+      linkList.appendChild(li);
+
+      let i = 0;
+      function typeChar() {
+        a.innerHTML = link.name.slice(0, i) + '<span class="cursor"></span>';
+        if (i < link.name.length) {
+          i++;
+          setTimeout(typeChar, 50);
+        } else {
+          a.innerHTML = link.name;
+          a.tabIndex = 0;
+          if (callback) setTimeout(callback, 200);
+        }
+      }
+      typeChar();
+    }
+
+    function typeAllLinks() {
+      const allowedLinks = links.filter(l => l.level <= selectedLevel);
+      linkList.innerHTML = '';
+      linkIndex = 0;
+      function next() {
+        if (linkIndex < allowedLinks.length) {
+          typeLink(allowedLinks[linkIndex], () => {
+            linkIndex++;
+            next();
+          });
+        } else if (allowedLinks.length === 0) {
+          const li = document.createElement('li');
+          li.textContent = 'Keine Dokumente für Ihr Sicherheitslevel verfügbar.';
+          linkList.appendChild(li);
+        }
+      }
+      next();
+    }
+    showBootSequence();
+  </script>
+</body>
+</html>
